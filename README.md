@@ -18,18 +18,14 @@
 ### 1. Clone and configure
 
 ```bash
-git clone <your-repo>
-cd neosapien_fileshare
+git clone File_Sharing App
+cd neosapian_file_sharing_app
 
 # Install Flutter deps
 flutter pub get
 
-# Copy env file
-cp .env.example .env
-# Fill in Firebase + Supabase values in .env
-
 # Generate firebase_options.dart
-flutterfire configure --project=YOUR_PROJECT_ID
+flutterfire configure --project=neosapien-share
 ```
 
 ### 2. Deploy backend
@@ -55,7 +51,7 @@ cd ..
 flutter devices
 
 # Run on a specific device
-flutter run -d <device_id>
+flutter run -d <device_id> #chrome, on mobile by enabling developer mode 
 ```
 
 ### 4. Build signed debug APK
@@ -95,9 +91,9 @@ flutter build apk --debug
     │                           │   └──────────────────────────┘
     │  Cloud Messaging          │
     │  - FCM push notifications │
-    │                           │
-    │  Cloud Functions          │
-    │  - onTransferCreated      │  → sends FCM to recipient
+    │    (#not implemented)     │
+    │    Cloud Functions          │
+    │  - onTransferCreated      │  → sends FCM to recipient FCM push notification need to implement 
     │  - expireTransfers        │  → 48-hour TTL cleanup
     │  - registerShortCode      │  → atomic collision-safe
     └───────────────────────────┘
@@ -106,10 +102,11 @@ flutter build apk --debug
 ### Transport choice: Firestore (metadata + real-time) + Supabase Storage (file bytes)
 
 | Concern | Solution | Rationale |
-|---|---|---|
+
 | Real-time transfer status | Firestore listeners | Snapshot listeners fire in <500ms — recipient sees transfer start without manual refresh |
+
 | Identity, short codes, transfer metadata | Firestore | Transactions for collision-safe short-code registration; structured queries for inbox/sent |
-| Push notifications | FCM via Cloud Functions | `onTransferCreated` trigger dispatches FCM on every new transfer document |
+
 | File bytes (upload / download) | Supabase Storage | Resumable uploads, signed download URLs, generous free-tier quota, RLS per transfer |
 
 **Why Supabase Storage instead of Firebase Storage?**
@@ -180,11 +177,17 @@ Supabase Storage provides a more generous free-tier quota for assessment-level t
 | Item | Notes |
 |---|---|
 | No Android foreground service | A `ForegroundService` would keep uploads alive on OEM ROMs (Xiaomi, Oppo, OnePlus) that kill background work. `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` helps but is not guaranteed. Not implemented — would be the first addition in a production build. |
+
 | No iOS URLSession background config | iOS requires a `URLSessionConfiguration.background` session for background transfers. The Supabase Storage SDK does not use this by default. Falls back to foreground-only on iOS. |
+
 | No nearby P2P transport | Wi-Fi Direct / BLE peer-to-peer is not implemented. All transfers go through Supabase Storage regardless of physical proximity. The `nearby_connections` package would be the integration path. |
+
 | FCM token refresh not persisted | If a user's FCM token rotates, the stored token in Firestore becomes stale and push notifications stop arriving. Fix: listen to `FirebaseMessaging.instance.onTokenRefresh` and write the new token to Firestore. The listener stub exists in `NotificationService.listenTokenRefresh()` but the Firestore write is a `TODO`. |
+
 | Orphaned in-progress transfers | If the app is killed during an upload and relaunched, the transfer stays `inProgress` in Firestore until the 48-hour TTL expires. Fix: on launch, check for transfers in `inProgress` state older than 10 minutes and surface a "retry" option. |
+
 | No content privacy / block list | Anyone who knows a user's short code can push files to them. A production build would add an accept-incoming prompt and a block list. Out of scope per the brief. |
+
 | iOS not end-to-end tested | The app compiles for iOS. Firebase and Supabase initialize. File picking uses the pub.dev `file_picker` fallback. Not validated on a physical iOS device. |
 
 ---
@@ -207,6 +210,7 @@ The brief awards credit for Pigeon-based native integration over pub.dev package
 - Running `dart run pigeon --input pigeons/file_picker_api.dart` to emit the final `.g.dart` / `.kt` / `.swift` glue files requires the full toolchain at build time. The generated output is documented in comments but not committed.
 - `UIDocumentPickerViewController` delegate wiring on iOS is not complete — Swift stubs are Pigeon-generated, delegate wiring is not.
 - `TransferProgressCallback` event channel wiring on the native Android side is not complete.
+- `failed and paused netow
 
 **With more time:** Complete the Pigeon code generation step, wire the Swift handler, replace `file_picker` entirely, and hook `TransferProgressCallback` into a native `URLSession` background task on iOS to drive upload progress from Supabase.
 
