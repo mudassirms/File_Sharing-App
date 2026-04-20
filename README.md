@@ -51,7 +51,7 @@ cd ..
 flutter devices
 
 # Run on a specific device
-flutter run -d <device_id> #chrome, on mobile by enabling developer mode 
+flutter run -d <device_id> #chrome, on mobile by enabling developer mode
 ```
 
 ### 4. Build signed debug APK
@@ -93,7 +93,7 @@ flutter build apk --debug
     │  - FCM push notifications │
     │    (#not implemented)     │
     │    Cloud Functions          │
-    │  - onTransferCreated      │  → sends FCM to recipient FCM push notification need to implement 
+    │  - onTransferCreated      │  → sends FCM to recipient FCM push notification need to implement
     │  - expireTransfers        │  → 48-hour TTL cleanup
     │  - registerShortCode      │  → atomic collision-safe
     └───────────────────────────┘
@@ -117,10 +117,10 @@ Supabase Storage provides a more generous free-tier quota for assessment-level t
 
 ## Devices Tested
 
-| Device | OS | Role |
-|---|---|---|
-| Pixel 7 | Android 14 | Sender |
-| Samsung Galaxy A54 | Android 13 | Recipient |
+| Device                             | OS         | Role                    |
+| ---------------------------------- | ---------- | ----------------------- |
+| Vivo V20 Pro                       | Android 14 | Sender                  |
+| Vivo V20                           | Android 13 | Recipient               |
 | Android Emulator (Pixel 6, API 34) | Android 14 | Secondary sender in dev |
 
 **iOS:** The app compiles on iOS and both Firebase and Supabase initialize correctly. File picking falls back to the `file_picker` pub.dev package. Not tested end-to-end on a physical iOS device. **Android is the primary target for this submission.**
@@ -141,41 +141,41 @@ Supabase Storage provides a more generous free-tier quota for assessment-level t
 
 ### ★ Starred requirements
 
-| Item | Status | Implementation |
-|---|---|---|
-| Short-code collisions | ✅ Handled | `registerShortCode` Cloud Function uses a Firestore transaction. Atomic check-and-set prevents races. Client retries up to 5 times with a fresh code. |
-| Invalid recipient code | ✅ Handled | `_lookupRecipient()` in `send_screen.dart` shows `"No user found with code X"` within under 1 second. Self-send is also blocked with a distinct error message. |
-| Recipient offline — queue with TTL | ✅ Queue | Transfer document stays in Firestore with `status: pendingAcceptance` for 48 hours. Recipient sees it on next app open. FCM data message wakes the app if still in background. After 48 hours, a scheduled Cloud Function marks the transfer `expired` and deletes the corresponding files from Supabase Storage. |
-| Network drops mid-transfer | ✅ Resume | Supabase Storage upload uses a chunked upload protocol. On reconnect, the upload continues from the last committed chunk — no full restart required. |
-| Large files (≤ 500 MB) | ✅ Enforced | `_pickFiles()` in `send_screen.dart` checks `appFile.size > maxFileSizeBytes` before upload and rejects with a SnackBar. Supabase Storage bucket policy enforces the same limit server-side. Files are streamed — never loaded into memory. |
-| Multiple files — per-file and aggregate progress | ✅ Both | Sender sees `transfer.overallProgress` aggregate bar plus per-file `_FileProgressRow` in `send_screen.dart`. Recipient sees per-file download progress in `_FileCard` inside `transfer_detail_screen.dart`. One file failing does not cancel the rest. |
-| Permission denial — degrade, don't crash | ✅ Graceful | `_ensureStoragePermission()` in `transfer_detail_screen.dart` is Android API-level aware: API 29+ needs no storage permission for app-specific directories; API ≤ 28 requests `WRITE_EXTERNAL_STORAGE`. Permanent denial shows a SnackBar with a Settings deep-link. The app does not crash on denial. |
-| Incoming transfer while app is closed | ✅ FCM + deep link | The `onTransferCreated` Cloud Function sends an FCM notification to the recipient's stored token. `NotificationService` handles the foreground case with `flutter_local_notifications`. Tapping the notification deep-links to `TransferDetail` via `go_router`. `firebaseMessagingBackgroundHandler` is registered as a top-level function for background wakeup. |
-| Transport encryption | ✅ TLS | All Firebase SDK traffic is TLS 1.2+. All Supabase SDK traffic is TLS 1.2+. Supabase Storage is HTTPS-only. No plaintext transport path exists on either service. |
+| Item                                             | Status             | Implementation                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Short-code collisions                            | ✅ Handled         | `registerShortCode` Cloud Function uses a Firestore transaction. Atomic check-and-set prevents races. Client retries up to 5 times with a fresh code.                                                                                                                                                                                                              |
+| Invalid recipient code                           | ✅ Handled         | `_lookupRecipient()` in `send_screen.dart` shows `"No user found with code X"` within under 1 second. Self-send is also blocked with a distinct error message.                                                                                                                                                                                                     |
+| Recipient offline — queue with TTL               | ✅ Queue           | Transfer document stays in Firestore with `status: pendingAcceptance` for 48 hours. Recipient sees it on next app open. FCM data message wakes the app if still in background. After 48 hours, a scheduled Cloud Function marks the transfer `expired` and deletes the corresponding files from Supabase Storage.                                                  |
+| Network drops mid-transfer                       | ✅ Resume          | Supabase Storage upload uses a chunked upload protocol. On reconnect, the upload continues from the last committed chunk — no full restart required.                                                                                                                                                                                                               |
+| Large files (≤ 500 MB)                           | ✅ Enforced        | `_pickFiles()` in `send_screen.dart` checks `appFile.size > maxFileSizeBytes` before upload and rejects with a SnackBar. Supabase Storage bucket policy enforces the same limit server-side. Files are streamed — never loaded into memory.                                                                                                                        |
+| Multiple files — per-file and aggregate progress | ✅ Both            | Sender sees `transfer.overallProgress` aggregate bar plus per-file `_FileProgressRow` in `send_screen.dart`. Recipient sees per-file download progress in `_FileCard` inside `transfer_detail_screen.dart`. One file failing does not cancel the rest.                                                                                                             |
+| Permission denial — degrade, don't crash         | ✅ Graceful        | `_ensureStoragePermission()` in `transfer_detail_screen.dart` is Android API-level aware: API 29+ needs no storage permission for app-specific directories; API ≤ 28 requests `WRITE_EXTERNAL_STORAGE`. Permanent denial shows a SnackBar with a Settings deep-link. The app does not crash on denial.                                                             |
+| Incoming transfer while app is closed            | ✅ FCM + deep link | The `onTransferCreated` Cloud Function sends an FCM notification to the recipient's stored token. `NotificationService` handles the foreground case with `flutter_local_notifications`. Tapping the notification deep-links to `TransferDetail` via `go_router`. `firebaseMessagingBackgroundHandler` is registered as a top-level function for background wakeup. |
+| Transport encryption                             | ✅ TLS             | All Firebase SDK traffic is TLS 1.2+. All Supabase SDK traffic is TLS 1.2+. Supabase Storage is HTTPS-only. No plaintext transport path exists on either service.                                                                                                                                                                                                  |
 
 ### Also handled
 
-| Item | Status | Notes |
-|---|---|---|
-| Self-send | ✅ Blocked | `IdentityService` compares the entered code against the current user's own short code and returns an error before any Firestore call. |
-| Duplicate delivery | ✅ Deduped | Transfers use a UUID `transferId`. Receiver identifies transfers by `transferId`, not filename. |
-| Metered connections | ⚠️ Warn | `ConnectivityService` detects cellular via `connectivity_plus`. Sending on cellular shows a confirmation dialog. Does not auto-block, but requires an explicit tap to proceed. |
-| Ambiguous characters in short code | ✅ Excluded | Alphabet deliberately omits `0`, `O`, `1`, `I`, `L`. The text field normalizes lowercase input to uppercase automatically. |
-| Corrupted transfers | ✅ SHA-256 | `TransferService` computes a SHA-256 hash of each file before upload and stores it on the Firestore transfer document. The receiver verifies the hash after downloading from Supabase Storage. A mismatch marks the file `corrupted` with a clear UI error. |
-| Unusual MIME types (.heic, .webp, .mov, extensionless) | ✅ No crash | MIME type is guessed from the file extension. Extensionless files fall back to `application/octet-stream` and transfer correctly. |
-| Filename conflicts on save | ✅ Rename | If a file with the same name already exists in the save directory, a numeric suffix is appended (`report (2).pdf`). |
-| Empty / zero-byte files | ✅ Rejected | `validate()` rejects zero-byte files with a clear message before any upload attempt. |
-| Low device storage | ✅ Pre-flight check | Before writing a received file, `TransferService` checks available space via `path_provider` + `dart:io`. Fails fast with a clear message if there is insufficient space. |
-| App backgrounded during upload | ✅ Survives (Android stock) | Upload tasks run on a background isolate. The upload continues when the app is backgrounded on stock Android. Aggressive OEM ROMs (Xiaomi MIUI, OnePlus OxygenOS) may kill background work — see Known Limitations. |
-| Network transition Wi-Fi ↔ cellular mid-transfer | ✅ Handled | `ConnectivityService` monitors `connectivity_plus`. The Supabase SDK reconnects automatically on network change. |
-| Identity persistence across reinstall | ⚠️ New code | App data cleared = new anonymous UID = new short code. No recovery flow. Documented tradeoff — simpler than a recovery system for this scope. |
+| Item                                                   | Status                      | Notes                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Self-send                                              | ✅ Blocked                  | `IdentityService` compares the entered code against the current user's own short code and returns an error before any Firestore call.                                                                                                                       |
+| Duplicate delivery                                     | ✅ Deduped                  | Transfers use a UUID `transferId`. Receiver identifies transfers by `transferId`, not filename.                                                                                                                                                             |
+| Metered connections                                    | ⚠️ Warn                     | `ConnectivityService` detects cellular via `connectivity_plus`. Sending on cellular shows a confirmation dialog. Does not auto-block, but requires an explicit tap to proceed.                                                                              |
+| Ambiguous characters in short code                     | ✅ Excluded                 | Alphabet deliberately omits `0`, `O`, `1`, `I`, `L`. The text field normalizes lowercase input to uppercase automatically.                                                                                                                                  |
+| Corrupted transfers                                    | ✅ SHA-256                  | `TransferService` computes a SHA-256 hash of each file before upload and stores it on the Firestore transfer document. The receiver verifies the hash after downloading from Supabase Storage. A mismatch marks the file `corrupted` with a clear UI error. |
+| Unusual MIME types (.heic, .webp, .mov, extensionless) | ✅ No crash                 | MIME type is guessed from the file extension. Extensionless files fall back to `application/octet-stream` and transfer correctly.                                                                                                                           |
+| Filename conflicts on save                             | ✅ Rename                   | If a file with the same name already exists in the save directory, a numeric suffix is appended (`report (2).pdf`).                                                                                                                                         |
+| Empty / zero-byte files                                | ✅ Rejected                 | `validate()` rejects zero-byte files with a clear message before any upload attempt.                                                                                                                                                                        |
+| Low device storage                                     | ✅ Pre-flight check         | Before writing a received file, `TransferService` checks available space via `path_provider` + `dart:io`. Fails fast with a clear message if there is insufficient space.                                                                                   |
+| App backgrounded during upload                         | ✅ Survives (Android stock) | Upload tasks run on a background isolate. The upload continues when the app is backgrounded on stock Android. Aggressive OEM ROMs (Xiaomi MIUI, OnePlus OxygenOS) may kill background work — see Known Limitations.                                         |
+| Network transition Wi-Fi ↔ cellular mid-transfer       | ✅ Handled                  | `ConnectivityService` monitors `connectivity_plus`. The Supabase SDK reconnects automatically on network change.                                                                                                                                            |
+| Identity persistence across reinstall                  | ⚠️ New code                 | App data cleared = new anonymous UID = new short code. No recovery flow. Documented tradeoff — simpler than a recovery system for this scope.                                                                                                               |
 
 ---
 
 ## Known Limitations
 
-| Item | Notes |
-|---|---|
+| Item                          | Notes                                                                                                                                                                                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | No Android foreground service | A `ForegroundService` would keep uploads alive on OEM ROMs (Xiaomi, Oppo, OnePlus) that kill background work. `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` helps but is not guaranteed. Not implemented — would be the first addition in a production build. |
 
 | No iOS URLSession background config | iOS requires a `URLSessionConfiguration.background` session for background transfers. The Supabase Storage SDK does not use this by default. Falls back to foreground-only on iOS. |
@@ -233,6 +233,7 @@ The brief awards credit for Pigeon-based native integration over pub.dev package
 Tools used: **Claude (Sonnet 4.5)**, **Cursor** for inline completions.
 
 **Where AI helped:**
+
 - Riverpod provider structure and Firebase initialization boilerplate
 - Firestore security rules first draft
 - Cloud Functions TypeScript — FCM message structure and transaction pattern for short-code registration
@@ -240,6 +241,7 @@ Tools used: **Claude (Sonnet 4.5)**, **Cursor** for inline completions.
 - Supabase Storage client setup and signed URL generation pattern
 
 **Where I overrode AI suggestions:**
+
 - AI suggested Firebase Storage for file bytes. Switched to Supabase Storage for better free-tier quota and simpler per-transfer RLS policy setup.
 - AI suggested loading entire files into memory for upload. Replaced with a streaming approach — required to handle the 500 MB ceiling without OOM.
 - AI suggested `flutter_secure_storage` for identity persistence. Used `shared_preferences` for the non-secret short code and Firebase Auth's own persistence for the UID — simpler and correct.
